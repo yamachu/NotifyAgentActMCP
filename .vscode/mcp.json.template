@@ -1,0 +1,15 @@
+{
+    "servers": {
+        "NofityAgentAct": {
+            "type": "stdio",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/NotifyAgentActMCP.csproj",
+                // if run on macOS, add the MACOS define constant
+                "-p:DefineConstants=MACOS"
+            ]
+        }
+    }
+}
