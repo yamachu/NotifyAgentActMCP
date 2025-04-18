@@ -7,53 +7,43 @@ namespace NotifyAgentActMCP.Services;
 
 public class VoicevoxTtsService
 {
-    private readonly string _openJTalkDictPath;
-    private readonly string _voiceModelPath;
     private readonly uint _styleId;
-    private readonly string _onnxruntimePath;
 
-    private OpenJtalk? _openJtalk;
-    private Onnxruntime? _onnxruntime;
-    private Synthesizer? _synthesizer;
+    private readonly OpenJtalk _openJtalk;
+    private readonly Onnxruntime _onnxruntime;
+    private readonly Synthesizer _synthesizer;
 
-    private bool _isInitialized = false;
-
-    public VoicevoxTtsService(string openJTalkDictPath, string voiceModelPath, uint styleId, string onnxruntimePath)
+    private VoicevoxTtsService(OpenJtalk openJtalk, Onnxruntime onnxruntime, Synthesizer synthesizer, uint styleId)
     {
-        _openJTalkDictPath = openJTalkDictPath;
-        _voiceModelPath = voiceModelPath;
+        _openJtalk = openJtalk;
+        _onnxruntime = onnxruntime;
+        _synthesizer = synthesizer;
         _styleId = styleId;
-        _onnxruntimePath = onnxruntimePath;
     }
 
-    public async Task Setup()
+    public static async Task<VoicevoxTtsService> Build(string openJTalkDictPath, string voiceModelPath, uint styleId, string onnxruntimePath)
     {
         var initializeOptions = InitializeOptions.Default();
-        _openJtalk = await OpenJtalkExtensions.NewAsync(_openJTalkDictPath);
+        var openJtalk = await OpenJtalkExtensions.NewAsync(openJTalkDictPath);
 
-        var loadOnnxruntimeOptions = new LoadOnnxruntimeOptions(_onnxruntimePath);
-        _onnxruntime = await OnnxruntimeExtensions.LoadOnceAsync(loadOnnxruntimeOptions);
+        var loadOnnxruntimeOptions = new LoadOnnxruntimeOptions(onnxruntimePath);
+        var onnxruntime = await OnnxruntimeExtensions.LoadOnceAsync(loadOnnxruntimeOptions);
 
-        var result = Synthesizer.New(_onnxruntime, _openJtalk, initializeOptions, out _synthesizer);
+        var result = Synthesizer.New(onnxruntime, openJtalk, initializeOptions, out var synthesizer);
         if (result != ResultCode.RESULT_OK)
         {
             throw new Exception(result.ToMessage());
         }
 
-        using var voiceModel = await VoiceModelFileExtensions.NewAsync(_voiceModelPath);
-        await _synthesizer.LoadVoiceModelAsync(voiceModel);
+        using var voiceModel = await VoiceModelFileExtensions.NewAsync(voiceModelPath);
+        await synthesizer.LoadVoiceModelAsync(voiceModel);
 
-        _isInitialized = true;
+        return new VoicevoxTtsService(openJtalk, onnxruntime, synthesizer, styleId);
     }
 
     public async Task<byte[]> Synthesize(string speechText)
     {
-        if (!_isInitialized)
-        {
-            throw new InvalidOperationException("VoicevoxTtsService is not initialized. Call Setup() first.");
-        }
-
-        var (_, wav) = await _synthesizer!.TtsAsync(speechText, _styleId, TtsOptions.Default());
+        var (_, wav) = await _synthesizer.TtsAsync(speechText, _styleId, TtsOptions.Default());
 
         return wav!;
     }

@@ -24,8 +24,7 @@ builder.Services
         var onnxruntimePath = "/Users/yamachu/Projects/github.com/yamachu/NotifyAgentActMCP/bin/Debug/net9.0/libvoicevox_onnxruntime.1.17.3.dylib";
         uint styleId = 1; // REPLACE_HERE
 
-        var service = new VoicevoxTtsService(openJTalkDictPath, voiceModelPath, styleId, onnxruntimePath);
-        service.Setup().Wait();
+        var service = VoicevoxTtsService.Build(openJTalkDictPath, voiceModelPath, styleId, onnxruntimePath).Result;
         return service;
     })
     .AddSingleton<AudioPlayService>();
